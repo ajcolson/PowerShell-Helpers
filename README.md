@@ -7,5 +7,5 @@
  Some scripts may require a bit of modication if you want to run them yourself, such as those referencing specific resources on a network, like a workstation hostname or server.
 
  ## Disclaimer
- Although these scripts o be job aids to IT technicians, as with all scripts you find from the Internet, please exercise caution when running these scripts. Before running these in your production enviroments, be sure to consult with your company's security department to ensure running local scripts is permitted. :innocent:
+ Although these scripts should be safe to use as job aids to IT technicians, as with all scripts you find from the Internet, please exercise caution when running these scripts. Before running these in your production enviroments, be sure to consult with your company's security department to ensure running local scripts is permitted. :innocent:
 
