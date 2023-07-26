@@ -37,26 +37,19 @@ Write-Host "Running queries now. This may take a few moments..."
 $queryResults = foreach( $dc in $DCs ) {
     Write-Host "Pinging DC: ${dc}"
     $dcPassword = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwd -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-    
+    $expiresOn = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwdExpirationTime -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwdExpirationTime    
+
     # Copy to clipboard if allowed and password is not blank
     if (($dcPassword -ne "") -and ($doCopyToClipboard -eq $True)) {
         Set-Clipboard -Value $dcPassword
     }
 
-    # If we aren't asked to show all results, we should stop after the first
-    # result that is not blank
-    if ( ($dcPassword -ne "") -And ($ShowAll -eq $False) ){
-        break
-    }
-    
-    # If we found a password, return it as part of an Object that lists it with
-    # the name of the DC it was found at
+    # Return Object with info
     New-Object PSObject -Property @{
         DC_NAME = $dc
         PASSWORD = $dcPassword
-    }
-    
-    
+        EXPIRES_ON = [datetime]::FromFileTime($expiresOn)
+    } 
 }
 Write-Host "Done. Printing results..."
 $queryResults | Format-Table
