@@ -1,5 +1,5 @@
 ## LAPS Password Finder
-## Last Modified: 28 Jun 2023
+## Last Modified: 4 Aug 2023
 ## Created By: Alex Colson <hello@ajcolson.com>
 ##
 ## This script helps find the LAPS password from AD for a given hostname.
@@ -37,7 +37,13 @@ Write-Host "Running queries now. This may take a few moments..."
 $queryResults = foreach( $dc in $DCs ) {
     Write-Host "Pinging DC: ${dc}"
     $dcPassword = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwd -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-    $expiresOn = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwdExpirationTime -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwdExpirationTime    
+    $expiresOnFromDC = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwdExpirationTime -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwdExpirationTime    
+    $expiresOn = ""
+    
+    # Format the expires date if not blank
+    if ($expiresOnFromDC -ne ""){
+        $expiresOn = [datetime]::FromFileTime($expiresOnFromDC)
+    }
 
     # Copy to clipboard if allowed and password is not blank
     if (($dcPassword -ne "") -and ($doCopyToClipboard -eq $True)) {
@@ -48,7 +54,7 @@ $queryResults = foreach( $dc in $DCs ) {
     New-Object PSObject -Property @{
         DC_NAME = $dc
         PASSWORD = $dcPassword
-        EXPIRES_ON = [datetime]::FromFileTime($expiresOn)
+        EXPIRES_ON = $expiresOn
     } 
 }
 Write-Host "Done. Printing results..."
