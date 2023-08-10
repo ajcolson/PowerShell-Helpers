@@ -1,6 +1,4 @@
-﻿###This file was autoinstalled by the Mapped Drive Printer Wizard.
-
-##
+﻿##
 ## Written By: Alex Colson <hello@ajcolson.com>
 ## 23 Aug 2018
 ##
