@@ -1,5 +1,5 @@
 ## LAPS Password Finder
-## Last Modified: 4 Aug 2023
+## Last Modified: 18 Aug 2023
 ## Created By: Alex Colson <hello@ajcolson.com>
 ##
 ## This script helps find the LAPS password from AD for a given hostname.
@@ -36,13 +36,34 @@ Write-Host "Running queries now. This may take a few moments..."
 
 $queryResults = foreach( $dc in $DCs ) {
     Write-Host "Pinging DC: ${dc}"
-    $dcPassword = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwd -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-    $expiresOnFromDC = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwdExpirationTime -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwdExpirationTime    
-    $expiresOn = ""
-    
-    # Format the expires date if not blank
-    if ($expiresOnFromDC -ne ""){
-        $expiresOn = [datetime]::FromFileTime($expiresOnFromDC)
+    $dcPassword = "N/A"
+    $expiresOn = "N/A"
+
+    # Try to check AD for the LAPS password andd when is set to expire. If the
+    # check fails, silently disregard the values. Also to note, there are some
+    # odd values that can get returned for the expires property. Some of these
+    # values throw out errors when attempting to convert them to readable
+    # formats, but in almost all cases the value only seems to take on this odd
+    # value when the password is undefined in AD. We should try to parse the
+    # value to readable text, but if it fails, we just disregard the result
+    # silently.
+    try {
+        $dcPasswordFromDC = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwd -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+        if ($dcPasswordFromDC -ne "" -or $dcPasswordFromDC -ne " ") {
+            $dcPassword = $dcPasswordFromDC
+        }
+
+        $expiresOnFromDC = get-adcomputer -Identity $Hostname -Properties ms-Mcs-AdmPwdExpirationTime -Server $dc | Select-Object -ExpandProperty ms-Mcs-AdmPwdExpirationTime
+        if ($expiresOnFromDC -ne "" -or $expiresOnFromDC -ne " "){
+            $expiresOn = [datetime]::FromFileTime($expiresOnFromDC)
+        }
+    } catch {}
+
+    # Return Object with info
+    New-Object PSObject -Property @{
+        DC_NAME = $dc
+        PASSWORD = $dcPassword
+        EXPIRES_ON = $expiresOn
     }
 
     # Copy to clipboard if allowed and password is not blank
@@ -50,12 +71,11 @@ $queryResults = foreach( $dc in $DCs ) {
         Set-Clipboard -Value $dcPassword
     }
 
-    # Return Object with info
-    New-Object PSObject -Property @{
-        DC_NAME = $dc
-        PASSWORD = $dcPassword
-        EXPIRES_ON = $expiresOn
-    } 
+    # If we aren't asked to show all results, we should stop after the first
+    # result that is not blank.
+    if (($dcPassword -ne "N/A" ) -and ($ShowAll -eq $False)){
+        break
+    }
 }
 Write-Host "Done. Printing results..."
 $queryResults | Format-Table
